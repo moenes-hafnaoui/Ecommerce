@@ -3,20 +3,87 @@ const router = express.Router();
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 
+const {uploadFile} = require('../middleware/upload-file');
+
+var transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: "agony050204@gmail.com",
+    pass: "pweq zzff wyah qqlp",
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
+
+
+
+require('dotenv').config();
 // créer un nouvel utilisateur
 router.post('/register', async (req, res) => {
   try {
     let { email, password, firstname, lastname } = req.body;
     const user = await User.findOne({ email });
-    if (user) return res.status(404).send({ success: false, message: "User already exists" });
+    if (user)
+      return res
+        .status(404)
+        .send({ success: false, message: "User already exists" });
 
     const newUser = new User({ email, password, firstname, lastname });
     const createdUser = await newUser.save();
-    return res.status(201).send({ success: true, message: "Account created successfully", user: createdUser });
+    
+    // Envoyer l'e-mail de confirmation de l'inscription
+    var mailOption = {
+      from: '"Verify your email" <agony050204@gmail.com>',
+      to: newUser.email,
+      subject: "Verify your email",
+      html: `<h2>${newUser.firstname}! Thank you for registering on our website</h2>
+<h4>Please verify your email to proceed...</h4>
+<a href="http://${req.headers.host}/api/users/status/edit?email=${newUser.email}">Click here to verify</a>`,
+    };
+    
+    transporter.sendMail(mailOption, function (error, info) {
+      if (error) {
+        console.log("Email error:", error);
+      } else {
+        console.log("Verification email sent:", info.response);
+      }
+    });
+    
+    return res
+      .status(201)
+      .send({
+        success: true,
+        message: "Account created successfully. Please check your email to verify your account.",
+        user: createdUser,
+      });
   } catch (err) {
     console.log(err);
     res.status(404).send({ success: false, message: err.message });
+  }
+});
+
+// as an admin i can disable or enable an account (also used for email verification)
+router.get('/status/edit/', async (req, res) => {
+  try {
+    let email = req.query.email;
+    console.log("Verifying email:", email);
+    let user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).send({ success: false, message: "User not found" });
+    }
+    user.isActive = !user.isActive;
+    await user.save();
+    res.status(200).send(`
+      <h1>Email Verified Successfully!</h1>
+      <p>Your account is now active. You can close this window and login.</p>
+    `);
+  } catch (err) {
+    console.log(err);
+    return res.status(404).send({ success: false, message: err.message });
   }
 });
 
@@ -27,21 +94,6 @@ router.get('/', async (req, res) => {
     res.status(200).json(users);
   } catch (error) {
     res.status(404).json({ message: error.message });
-  }
-});
-
-/**
- * as an admin i can disable or enable an account
- */
-router.get('/status/edit/', async (req, res) => {
-  try {
-    let email = req.query.email;
-    let user = await User.findOne({ email });
-    user.isActive = !user.isActive;
-    user.save();
-    res.status(200).send({ success: true, user });
-  } catch (err) {
-    return res.status(404).send({ success: false, message: err });
   }
 });
 
@@ -64,17 +116,55 @@ router.post('/login', async (req, res) => {
         delete user._doc.password;
         if (!user.isActive) return res.status(200).send({ success: false, message: 'Your account is inactive, Please contact your administrator' });
 
-        const token = jwt.sign({ iduser: user._id, name: user.firstname, role: user.role }, process.env.SECRET, {
-          expiresIn: "1h",
-        });
+        const token = generateAccessToken({ _id: user._id, role: user.role });
+        const refreshToken = generateRefreshToken({ _id: user._id, role: user.role });
 
-        return res.status(200).send({ success: true, user, token });
+        return res.status(200).send({ success: true, user, token, refreshToken });
       } else {
         return res.status(404).send({ success: false, message: "Please verify your credentials" });
       }
     }
   } catch (err) {
     return res.status(404).send({ success: false, message: err.message });
+  }
+});
+
+// Access Token
+const generateAccessToken = (user) => {
+  return jwt.sign({ iduser: user._id, role: user.role }, process.env.SECRET, {
+    expiresIn: '60s'
+  });
+};
+
+// Refresh Token
+function generateRefreshToken(user) {
+  return jwt.sign({ iduser: user._id, role: user.role }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: '1y'
+  });
+}
+
+// Refresh Route
+router.post('/refreshToken', async (req, res) => {
+  console.log(req.body.refreshToken);
+  const refreshtoken = req.body.refreshToken;
+  if (!refreshtoken) {
+    return res.status(404).send({ success: false, message: 'Token Not Found' });
+  } else {
+    jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+      if (err) {
+        console.log(err);
+        return res.status(406).send({ success: false, message: 'Unauthorized' });
+      } else {
+        const token = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+        console.log("token-------", token);
+        res.status(200).send({
+          success: true,
+          token,
+          refreshToken
+        });
+      }
+    });
   }
 });
 

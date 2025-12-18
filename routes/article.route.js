@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Article=require("../models/article")
 const Scategorie =require("../models/scategorie")
+const {verifyToken} =require("../middleware/verify-token")
+const {authorizeRoles} = require("../middleware/authorizeRoles")
 // afficher la liste des articles.
-router.get('/', async (req, res, )=> {
+router.get('/', verifyToken, authorizeRoles("user","admin","visiteur"), async (req, res, )=> {
 try {
 const articles = await Article.find({}, null, {sort: {'_id': -1}}).populate("scategorieID").exec();
 res.status(200).json(articles);
@@ -11,15 +13,19 @@ res.status(200).json(articles);
 res.status(404).json({ message: error.message });
 }
 });
+
 // créer un nouvel article
-router.post('/', async (req, res) => {
-const nouvarticle = new Article(req.body)
-try {
-await nouvarticle.save();
-res.status(200).json(nouvarticle );
-} catch (error) {
-res.status(404).json({ message: error.message });
-}
+const { uploadFile } = require('../middleware/upload-file');
+router.post('/', verifyToken, uploadFile.single("imageart"), async (req, res) => {
+  try {
+    const { reference, designation, prix, marque, qtestock, scategorieID } = req.body;
+    const imageart = req.file ? req.file.filename : null; // Make image optional
+    const nouvarticle = new Article({ reference, designation, prix, marque, qtestock, scategorieID, imageart });
+    await nouvarticle.save();
+    res.status(200).json(nouvarticle);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
 });
 // afficher la liste des articles par page
 router.get('/pagination', async(req, res) => {
@@ -70,14 +76,13 @@ await Article.findByIdAndDelete(id);
 res.json({ message: "article deleted successfully." });
 });
 // chercher un article par s/cat
-router.get('/scat/:scategorieID',async(req, res)=>{
-try {
-const art = await Article.find({ scategorieID:
-req.params.scategorieID}).exec();
-res.status(200).json(art);
-} catch (error) {
-res.status(404).json({ message: error.message });
-}
+router.get('/scat/:scategorieID', async(req, res) => {
+  try {
+    const art = await Article.find({ scategorieID: req.params.scategorieID }).exec();
+    res.status(200).json(art);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
 });
 // chercher un article par cat
 router.get('/cat/:categorieID', async (req, res) => {
