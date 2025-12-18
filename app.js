@@ -11,7 +11,7 @@ app.use(cors())
 //BodyParser Middleware
 app.use(express.json());
 // Connexion à la base données
-mongoose.connect(process.env.DATABASE)
+mongoose.connect(process.env.DATABASECLOUD)
 .then(() => {console.log("DataBase Successfully Connected");})
 .catch(err => { console.log("Unable to connect to database", err);
 process.exit(); });
