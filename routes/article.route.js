@@ -5,8 +5,7 @@ const Scategorie =require("../models/scategorie")
 // afficher la liste des articles.
 router.get('/', async (req, res, )=> {
 try {
-const articles = await Article.find({}, null, {sort: {'_id': -
-1}}).populate("scategorieID").exec();
+const articles = await Article.find({}, null, {sort: {'_id': -1}}).populate("scategorieID").exec();
 res.status(200).json(articles);
 } catch (error) {
 res.status(404).json({ message: error.message });
@@ -83,16 +82,13 @@ res.status(404).json({ message: error.message });
 // chercher un article par cat
 router.get('/cat/:categorieID', async (req, res) => {
 try {
-// Recherche des sous-catégories correspondant à la catégorie donnée
-const sousCategories = await Scategorie.find({ categorieID:
-req.params.categorieID }).exec();
+// Recherche des sous-catégories correspondant à la catégorie donnée (bypass mongoose casting)
+const sousCategories = await Scategorie.collection.find({ categorieID: req.params.categorieID }).toArray();
 
 // Initialiser un tableau pour stocker les identifiants des sous-catégories trouvées
-
 const sousCategorieIDs = sousCategories.map(scategorie => scategorie._id);
 // Recherche des articles correspondant aux sous-catégories trouvées
-const articles = await Article.find({ scategorieID: { $in:
-sousCategorieIDs } }).exec();
+const articles = await Article.find({ scategorieID: { $in:sousCategorieIDs } }).exec();
 res.status(200).json(articles);
 } catch (error) {
 res.status(404).json({ message: error.message });
