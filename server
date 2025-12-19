@@ -1,0 +1,10 @@
+#!/bin/bash
+echo "=========================================="
+echo "Lancement via CONCURRENTLY..."
+echo "=========================================="
+
+npx concurrently \
+  --names "API,MCP-SRV" \
+  --prefix-colors "blue,green" \
+  "nodemon app.js" \
+  "nodemon server.js"

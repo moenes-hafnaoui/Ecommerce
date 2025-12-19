@@ -5,13 +5,17 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app"
+    "start": "nodemon app",
+    "mcp": "node server.js",
+    "dev": "currently \"nodemon app\" \"node server.js\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -19,6 +23,12 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.1",
     "multer": "^2.0.2",
-    "nodemailer": "^7.0.11"
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^7.0.11",
+    "ollama": "^0.6.3",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "currently": "^0.0.8"
   }
 }

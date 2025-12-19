@@ -10,8 +10,8 @@ const {uploadFile} = require('../middleware/upload-file');
 var transporter = nodemailer.createTransport({
   service: "Gmail",
   auth: {
-    user: "agony050204@gmail.com",
-    pass: "pweq zzff wyah qqlp",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
   tls: {
     rejectUnauthorized: false,
@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
     
     // Envoyer l'e-mail de confirmation de l'inscription
     var mailOption = {
-      from: '"Verify your email" <agony050204@gmail.com>',
+      from: `"Verify your email" <${process.env.EMAIL_USER}>`,
       to: newUser.email,
       subject: "Verify your email",
       html: `<h2>${newUser.firstname}! Thank you for registering on our website</h2>
@@ -166,6 +166,30 @@ router.post('/refreshToken', async (req, res) => {
       }
     });
   }
+})
+router.get("/getallusers", async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
 });
+router.post("/getuserbyname", async (req, res) => {
+  try {
+    const { firstname } = req.body;
+    if (!firstname) {
+      return res.status(400).json({ message: "Le nom est requis" });
+    }
+    const user = await User.findOne({ firstname: firstname });
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 module.exports = router;

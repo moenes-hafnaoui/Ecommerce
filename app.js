@@ -33,6 +33,9 @@ app.use("/api/articles", articleRouter);
 const userRouter = require("./routes/user.route");
 app.use("/api/users", userRouter);
 
+const llmRouter=require('./routes/agent.route.js')
+app.use('/api/llm', llmRouter);
+
 app.listen(process.env.PORT, () => {
   console.log(`Server is listening on port ${process.env.PORT}`);
 });
